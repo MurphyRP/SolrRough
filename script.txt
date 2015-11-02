@@ -1,0 +1,57 @@
+lab 1
+dse cassandra -f -s
+chmod +x populate_simple.py
+./populate_simple.py metadata.json geodata.csv
+
+lab 2
+dsetool create_core amazon.metadata generateResources=true
+dsetool rebuild_indexes amazon metadata
+nodetool flush
+
+lab 3
+select * from amazon.metadata where solr_query='title:Noir~';
+select * from amazon.metadata where solr_query='title:Noir~' LIMIT 10;
+select * from amazon.metadata where solr_query='{"q":"title:Noir~"}' LIMIT 10;
+select * from amazon.metadata where solr_query='{"q":"title:Noir~ AND categories:Books"}' LIMIT 10;
+select * from amazon.metadata where solr_query='{"q":"title:Noir~", "fq":"categories:Books"}' LIMIT 10;
+select * from amazon.metadata where solr_query='{"q":"title:Noir~", "fq":"categories:Books", "sort":"title asc"}' LIMIT 10;
+select * from amazon.metadata where solr_query='{"q":"title:Noir~", "facet":{"field":"categories"}}}';
+
+
+lab 4
+http://localhost:8983/solr/#/amazon.metadata/query
+q     title:Noir~
+fq    categories:Books
+hl    true
+hl.fl title
+
+
+lab 5
+dsetool get_core_schema amazon.metadata
+dsetool reload_core amazon.metadata schema=schema_lab5.xml
+dsetool rebuild_indexes amazon metadata
+select * from amazon.metadata where solr_query='{"q":"title:horse AND categories:Books"}' LIMIT 10;
+
+lab 6
+dsetool create_core amazon.clicks generateResources=true
+dsetool rebuild_indexes amazon clicks
+dsetool get_core_schema amazon.clicks
+dsetool reload_core amazon.clicks schema=schema_lab6.xml
+dsetool rebuild_indexes amazon clicks
+SELECT * FROM amazon.clicks WHERE solr_query='{"q":"asin:*", "fq":"+{!geofilt pt=\"37.7484,-122.4156\" sfield=location d=1}"}' limit 10;
+
+lab 7
+SELECT * FROM amazon.metadata WHERE solr_query='{"q":"*:*", "fq":"{!join from=asin to=asin force=true fromIndex=amazon.clicks}country:US"}';
+SELECT * FROM amazon.metadata WHERE solr_query='{"q":"*:*", "fq":"{!join from=asin to=asin force=true fromIndex=amazon.clicks}(country:US AND region:CA)"}';
+SELECT * FROM amazon.metadata WHERE solr_query='{"q":"*:*", "fq":"{!join from=asin to=asin force=true fromIndex=amazon.clicks}(+{!geofilt pt=\"37.7484,-122.4156\" sfield=location d=1})"}';
+
+lab 8
+dsetool create_core amazon.rank generateResources=true
+dsetool rebuild_indexes amazon rank
+SELECT * FROM amazon.metadata WHERE solr_query='{"q":"*:*", "fq":"{!join from=asin to=asin force=true fromIndex=amazon.clicks}(+{!geofilt pt=\"37.7484,-122.4156\" sfield=location d=1} AND _query_:\"{!join from=asin to=asin force=true fromIndex=amazon.clicks}(area_code:415)\")"}';
+
+
+lab 9
+dsetool get_core_schema amazon.metadata
+dsetool get_core_config amazon.metadata
+dsetool reload_core amazon.metadata schema=schema_lab9.xml
